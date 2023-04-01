@@ -327,7 +327,6 @@ def process_model(
         frames = range(1, frames_count + 1)
     else:
         frames = frames_count
-
     pool = multiprocessing.get_context("spawn").Pool(
         processes=len(gpus),
         initializer=init_worker,
@@ -438,8 +437,8 @@ def process_tile(img, tile_size, scale, y, x, height, width, output, logging_ite
 
     # input tile dimensions
     input_tile = img[
-        input_start_y + b_start_y : input_end_y + b_end_y,
-        input_start_x + b_start_x : input_end_x + b_end_x,
+        input_start_y + b_start_y: input_end_y + b_end_y,
+        input_start_x + b_start_x: input_end_x + b_end_x,
         :,
     ].copy()
 
@@ -479,10 +478,10 @@ def process_tile(img, tile_size, scale, y, x, height, width, output, logging_ite
     b_start_x = b_start_x * scale
     input_end_x = input_end_x * scale
 
-    ## transpose time
+    # transpose time
     output[input_start_y:input_end_y, input_start_x:input_end_x, :] = output_tile[
-        -1 * b_start_y : input_end_y - input_start_y - b_start_y,
-        -1 * b_start_x : input_end_x - input_start_x - b_start_x,
+        -1 * b_start_y: input_end_y - input_start_y - b_start_y,
+        -1 * b_start_x: input_end_x - input_start_x - b_start_x,
         :,
     ]
 
@@ -547,7 +546,8 @@ def upscale_image(
         else:
             logging_items.append(["info", "Upscaled " + output_file_name])
     else:
-        logging_items.append(["info", "Upscaled " + str(frame) + "/" + str(end_frame)])
+        logging_items.append(
+            ["info", "Upscaled " + str(frame) + "/" + str(int(end_frame))])
 
     return logging_items
 
@@ -566,11 +566,12 @@ def upscale_frames(
     model_output,
     remove=True,
 ):
+    print(start_frame)
 
     if frame_batch and isinstance(frame_batch, list):
         frames = frame_batch
     else:
-        frames = range(start_frame, end_frame + 1)
+        frames = range(int(start_frame), int(end_frame) + 1)
 
     pool = multiprocessing.get_context("spawn").Pool(
         processes=len(gpus),
@@ -586,7 +587,7 @@ def upscale_frames(
         ),
     )
 
-    ## upscale frames
+    # upscale frames
     for frame in frames:
 
         input_file_name = str(frame) + "." + input_file_tag + ".png"
@@ -621,27 +622,19 @@ def merge_frames(
     output_format,
 ):
 
+# ffmpeg -framerate 23.98 -i 'C:\Users\Syed Usama Ahmad\Music\pythontask\upscale_video\temp\upscale_video\%d.png' 
+# -c:v libx264 -r 23.98 -pix_fmt yuv420p output_testr.mp4
     cmds = [
         ffmpeg,
         "-hide_banner",
         "-hwaccel",
         "auto",
-        "-r",
+        "-framerate",
         str(frame_rate),
-        "-f",
-        "image2",
-        "-start_number",
-        str(start_frame),
         "-i",
         "%d.png",
-        "-vcodec",
-        ffmpeg_encoder,
-        "-frames:v",
-        str(1 + end_frame - start_frame),
         "-pix_fmt",
-        "p010le",
-        "-global_quality",
-        "20",
+        "yuv420p",
         "-loglevel",
         "error",
         str(frame_batch) + "." + output_format,
@@ -651,10 +644,10 @@ def merge_frames(
         "Merging Batch: "
         + str(frame_batch)
         + " : Number of frames: "
-        + str(1 + end_frame - start_frame)
+        + str(1 + (int(end_frame) - int(start_frame)))
     )
 
-    ## run ffmpeg to merge frames
+    # run ffmpeg to merge frames
     logging.info(cmds)
     result = subprocess.run(cmds, capture_output=True, text=True)
 
@@ -666,7 +659,7 @@ def merge_frames(
         logging.error(str(result.args))
         logging.error("Testing PNG files for corruption..")
         bad_frames = []
-        for frame in range(start_frame, end_frame + 1):
+        for frame in range(int(start_frame), int(end_frame)+1):
             try:
                 img = Image.open(str(frame) + ".png")
                 img.verify()
@@ -683,19 +676,25 @@ def merge_frames(
     time.sleep(5)
 
     if os.path.exists(str(frame_batch) + "." + output_format):
-        logging.info("Batch merged into " + str(frame_batch) + "." + output_format)
+        logging.info("Batch merged into " +
+                     str(frame_batch) + "." + output_format)
         logging.info(str(end_frame) + " total frames merged")
 
-        ## delete merged png files
-        for frame in range(start_frame, end_frame + 1):
+        # delete merged png files
+        for frame in range(int(start_frame), int(end_frame)+ 1):
             os.remove(str(frame) + ".png")
     else:
         logging.error("Something went wrong with PNG merging..")
         logging.error(str(frame_batch) + "." + output_format + " not found..")
         sys.exit("Error - Exiting")
 
+#  ffmpeg -hide_banner -f concat -safe 0 -i
+#  merge_list.txt -i 'C:\\Users\\Syed Usama Ahmad\\Music\\pythontask\\upscale_video\\test.mp4'
+#  -loglevel error -c:a copy -map 0:v:0 -map 1:a:0
+#  -c:v libx264  'C:\\Users\\Syed Usama Ahmad\\Music\\pythontask\\upscale_video\\test.2x.mp4'
 
-def merge_files(ffmpeg, frame_batches, output_file, output_format, log_dir):
+
+def merge_files(ffmpeg, frame_batches, output_file, input_file, output_format, log_dir):
     logging.info("Merging Fragments into " + output_file)
     output_format = output_file.split(".")[-1]
     with open("merge_list.txt", "w") as f:
@@ -716,6 +715,7 @@ def merge_files(ffmpeg, frame_batches, output_file, output_format, log_dir):
         "-c",
         "copy",
         output_file,
+        "-y",
     ]
 
     logging.info(cmds)
@@ -729,13 +729,83 @@ def merge_files(ffmpeg, frame_batches, output_file, output_format, log_dir):
         logging.error(str(result.args))
         sys.exit("Error - Exiting")
 
-    ## delete merged files
+
+def merge_video_audio(ffmpeg, frame_batches, input_file, output_file, output_file_final, output_format, log_dir):
+    logging.info("Merging Audio into Video " + output_file)
+    output_format = output_file.split(".")[-1]
+
+    audio_file = output_file.replace('.mp4', '.aac')
+
+    cmds = [
+        ffmpeg,
+        "-hide_banner",
+        "-i",
+        input_file,
+        "-vn",
+        "-loglevel",
+        "error",
+        "-acodec",
+        "copy",
+        audio_file,
+        "-y",
+    ]
+
+# ffmpeg -i output_test.mp4 -i output-audio.aac -map 0:v -map 1:a -c:v copy -shortest output_withaudio.mp4
+
+    cmds_w_a = [
+        ffmpeg,
+        "-hide_banner",
+        "-i",
+        output_file,
+        "-i",
+        audio_file,
+        "-loglevel",
+        "error",
+        "-map",
+        "0:v",
+        "-map",
+        "1:a",
+        "-c:v",
+        "copy",
+        "-shortest",
+        output_file_final,
+        "-y",
+    ]
+    logging.info(cmds)
+    result = subprocess.run(cmds, capture_output=True, text=True)
+
+    if result.stderr:
+        if os.path.exists(audio_file):
+            os.remove(audio_file)
+        logging.error("Extracting audio failed")
+        logging.error(str(result.stderr))
+        logging.error(str(result.args))
+        sys.exit("Error - Exiting")
+
+    logging.info(cmds_w_a)
+    result = subprocess.run(cmds_w_a, capture_output=True, text=True)
+
+    if result.stderr:
+        if os.path.exists(output_file_final):
+            os.remove(output_file_final)
+        logging.error("File merging failed")
+        logging.error(str(result.stderr))
+        logging.error(str(result.args))
+        sys.exit("Error - Exiting")
+
+    #delete audio file
+    if os.path.exists(audio_file):
+            os.remove(audio_file)  
+    #delete video file with no audio
     if os.path.exists(output_file):
+            os.remove(output_file)    
+    # delete merged files
+    if os.path.exists(output_file_final):
         for i in range(frame_batches):
             os.remove(str(i + 1) + "." + output_format)
     else:
         logging.error("Something went wrong with file merging..")
-        logging.error(output_file + " not found..")
+        logging.error(output_file_final + " not found..")
         sys.exit("Error - Exiting")
 
 
@@ -806,10 +876,12 @@ def process_file(
     )
 
     if log_dir:
-        log_file = os.path.join(log_dir, input_file.split(os.sep)[-1][:-4] + ".log")
+        log_file = os.path.join(
+            log_dir, input_file.split(os.sep)[-1][:-4] + ".log")
         # create log file handler and set level to debug
         fh = logging.FileHandler(log_file)
-        fh.setFormatter(logging.Formatter("[%(asctime)s] [%(levelname)s] %(message)s"))
+        fh.setFormatter(logging.Formatter(
+            "[%(asctime)s] [%(levelname)s] %(message)s"))
         fh.setLevel(logging.DEBUG)
         logging.getLogger().addHandler(fh)
 
@@ -827,11 +899,14 @@ def process_file(
 
     if not output_file:
         output_file = input_file.split(".")
-        output_file = ".".join(output_file[:-1] + [str(scale) + "x", output_format])
+        output_file_w_a = ".".join(
+            output_file[:-1] + [str(scale) + "a", output_format])
+        output_file = ".".join(
+            output_file[:-1] + [str(scale) + "x", output_format])
 
     logging.info("Processing File: " + input_file)
 
-    ## Create temp directory
+    # Create temp directory
     if not temp_dir:
         temp_dir = tempfile.gettempdir()
 
@@ -843,25 +918,25 @@ def process_file(
     else:
         os.mkdir(temp_dir)
 
-    ## change working directory to temp directory
+    # change working directory to temp directory
     os.chdir(temp_dir)
 
-    if resume_processing and os.path.exists("completed.txt"):
-        sys.exit(input_file + "already processed - Exiting")
+    # if resume_processing and os.path.exists("completed.txt"):
+    #     sys.exit(input_file + "already processed - Exiting, note: if you are using temp folder then manually delete temp\upscale_video folder")
 
     if sys.platform in ["win32", "cygwin", "darwin"]:
         from wakepy import set_keepawake
 
         set_keepawake(keep_screen_awake=False)
 
-    ## get metadata
+    # get metadata
     info_dict = get_metadata(ffmpeg, input_file)
 
     frames_count = info_dict["number_of_frames"]
     frame_rate = info_dict["frame_rate"]
     duration = info_dict["duration"]
 
-    ## calculate frames per minute and batches
+    # calculate frames per minute and batches
     if batch_size > 0:
         frames_per_batch = int(frame_rate * 60) * batch_size
     else:
@@ -916,6 +991,29 @@ def process_file(
         workers_used += len(gpus)
         input_file_tag = "anime"
 
+    if "e" in models:
+        logging.info("Starting anime touchup...")
+
+        model_file = "realesrgan-x4plus-anime"
+        output_file_tag = "anime"
+
+        process_model(
+            frames_count,
+            model_path,
+            model_file,
+            1,
+            "input",
+            "output",
+            input_file_tag,
+            output_file_tag,
+            gpus,
+            workers_used,
+            remove=True,
+        )
+
+        workers_used += len(gpus)
+        input_file_tag = "anime"
+
     logging.info("Starting upscale processing...")
 
     if "r" in models:
@@ -927,7 +1025,7 @@ def process_file(
         model_input = "input"
         model_output = "output"
 
-    ## process input file in batches
+    # process input file in batches
     for frame_batch, frame_range in frame_batches.items():
 
         if os.path.exists(str(frame_batch) + "." + output_format):
@@ -959,13 +1057,16 @@ def process_file(
             output_format,
         )
 
-    ## merge video files into a single video file
-    merge_files(ffmpeg, frame_batch, output_file, output_format, log_dir)
+    # merge video files into a single video file
+    merge_files(ffmpeg, frame_batch, output_file,
+                input_file, output_format, log_dir)
+
+    merge_video_audio(ffmpeg, frame_batch, input_file, output_file, output_file_w_a, output_format, log_dir)
 
     with open("completed.txt", "w") as f:
         f.write("Completed")
 
-    logging.info("Upscale video finished for " + output_file)
+    logging.info("Upscale video finished for " + output_file_w_a)
 
     if not resume_processing:
         logging.info("Cleaning up temp directory")

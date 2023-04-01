@@ -109,7 +109,32 @@ def process_image(
         workers_used += len(gpus)
         input_file_tag = "anime"
 
+    if "e" in models:
+        logging.info("Starting anime touchup...")
+
+        model_file = "realesrgan-x4plus-anime"
+        output_file_tag = "anime"
+
+        process_model(
+            input_frames,
+            model_path,
+            model_file,
+            1,
+            "input",
+            "output",
+            input_file_tag,
+            output_file_tag,
+            gpus,
+            workers_used,
+            remove=False,
+        )
+
+        workers_used += len(gpus)
+        input_file_tag = "anime"
+
     logging.info("Starting upscale processing...")
+
+
 
     for frame in input_frames:
         try:

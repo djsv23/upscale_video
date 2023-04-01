@@ -119,6 +119,7 @@ options:
                                       scale will autoset to 4.
   -m, --models MODELS                 '-m a' will add processing for anime to remove grain and color bleeding.
                                       '-m n=???' will add processing to remove film grain.
+                                      '-m e' will add processing for anime with esrgan.
                                       Denoise level 1 to 30. 3 = light / 10 = heavy, etc.
                                       '-m r' will add processing for real life imaging
                                       Can include combinations like '-m a,n=3,r'
@@ -137,6 +138,18 @@ options:
 
 ```
 
+# Command
+
+```
+ python upscale_video.py -i INPUTFILE  -s 4 --ffmpeg FFMPEG -t TEMPDIRNAME -g 1,1 -r -b 10 -e libx264 '-m a'
+
+```
+or
+
+```
+python .\upscale_video.py -i 'C:\Users\Syed Usama Ahmad\Music\pythontask\upscale_video\test.mp4'  -s 4 --ffmpeg FFMPEG -t 'C:\Users\Syed Usama Ahmad\Music\pythontask\upscale_video\temp' -g 1,1,1 -r -b 10 -e libx264 '-m e'
+
+```
 
 # Samples
 
