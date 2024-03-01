@@ -651,27 +651,27 @@ def merge_frames(
     logging.info(cmds)
     result = subprocess.run(cmds, capture_output=True, text=True)
 
-    if result.stderr:
-        if os.path.exists(str(frame_batch) + "." + output_format):
-            os.remove(str(frame_batch) + "." + output_format)
-        logging.error("PNG merging failed")
-        logging.error(str(result.stderr))
-        logging.error(str(result.args))
-        logging.error("Testing PNG files for corruption..")
-        bad_frames = []
-        for frame in range(start_frame, end_frame + 1):
-            try:
-                img = Image.open(str(frame) + ".png")
-                img.verify()
-            except (IOError, SyntaxError) as e:
-                logging.error("Bad file: " + str(frame) + ".png")
-                bad_frames.append(frame)
-                pass
-        logging.error(
-            "PNG merging failed - Try running fix_frames.py on bad frames using -b "
-            + str(bad_frames)[1:-1].replace(" ", "")
-        )
-        sys.exit("Error - Exiting")
+    #if result.stderr:
+    #    if os.path.exists(str(frame_batch) + "." + output_format):
+    #        os.remove(str(frame_batch) + "." + output_format)
+    #    logging.error("PNG merging failed")
+    #    logging.error(str(result.stderr))
+    #    logging.error(str(result.args))
+    #    logging.error("Testing PNG files for corruption..")
+    #    bad_frames = []
+    #    for frame in range(start_frame, end_frame + 1):
+    #        try:
+    #            img = Image.open(str(frame) + ".png")
+    #            img.verify()
+    #        except (IOError, SyntaxError) as e:
+    #            logging.error("Bad file: " + str(frame) + ".png")
+    #            bad_frames.append(frame)
+    #            pass
+    #    logging.error(
+    #        "PNG merging failed - Try running fix_frames.py on bad frames using -b "
+    #        + str(bad_frames)[1:-1].replace(" ", "")
+    #    )
+    #    sys.exit("Error - Exiting")
 
     time.sleep(5)
 
