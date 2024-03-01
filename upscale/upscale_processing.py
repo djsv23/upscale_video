@@ -720,15 +720,83 @@ def merge_files(ffmpeg, frame_batches, output_file, output_format, log_dir):
         logging.error(str(result.args))
         sys.exit("Error - Exiting")
 
-    ## delete merged files
+def merge_video_audio(ffmpeg, frame_batches, input_file, output_file, output_file_final, output_format, log_dir):
+    logging.info("Merging Audio into Video " + output_file)
+    output_format = output_file.split(".")[-1]
+
+    audio_file = output_file.replace('.mp4', '.aac')
+
+    cmds = [
+        ffmpeg,
+        "-hide_banner",
+        "-i",
+        input_file,
+        "-vn",
+        "-loglevel",
+        "error",
+        "-acodec",
+        "copy",
+        audio_file,
+        "-y",
+    ]
+
+# ffmpeg -i output_test.mp4 -i output-audio.aac -map 0:v -map 1:a -c:v copy -shortest output_withaudio.mp4
+
+    cmds_w_a = [
+        ffmpeg,
+        "-hide_banner",
+        "-i",
+        output_file,
+        "-i",
+        audio_file,
+        "-loglevel",
+        "error",
+        "-map",
+        "0:v",
+        "-map",
+        "1:a",
+        "-c:v",
+        "copy",
+        "-shortest",
+        output_file_final,
+        "-y",
+    ]
+    logging.info(cmds)
+    result = subprocess.run(cmds, capture_output=True, text=True)
+
+    if result.stderr:
+        if os.path.exists(audio_file):
+            os.remove(audio_file)
+        logging.error("Extracting audio failed")
+        logging.error(str(result.stderr))
+        logging.error(str(result.args))
+        sys.exit("Error - Exiting")
+
+    logging.info(cmds_w_a)
+    result = subprocess.run(cmds_w_a, capture_output=True, text=True)
+
+    if result.stderr:
+        if os.path.exists(output_file_final):
+            os.remove(output_file_final)
+        logging.error("File merging failed")
+        logging.error(str(result.stderr))
+        logging.error(str(result.args))
+        sys.exit("Error - Exiting")
+
+    #delete audio file
+    if os.path.exists(audio_file):
+            os.remove(audio_file)  
+    #delete video file with no audio
     if os.path.exists(output_file):
+            os.remove(output_file)    
+    # delete merged files
+    if os.path.exists(output_file_final):
         for i in range(frame_batches):
             os.remove(str(i + 1) + "." + output_format)
     else:
         logging.error("Something went wrong with file merging..")
-        logging.error(output_file + " not found..")
+        logging.error(output_file_final + " not found..")
         sys.exit("Error - Exiting")
-
 
 def process_file(
     input_file,
@@ -961,10 +1029,12 @@ def process_file(
         ## merge video files into a single video file
         merge_files(ffmpeg, frame_batch, output_file, output_format, log_dir)
 
+        merge_video_audio(ffmpeg, frame_batch, input_file, output_file, output_file_w_a, output_format, log_dir)
+
         with open("completed.txt", "w") as f:
             f.write("Completed")
 
-        logging.info("Upscale video finished for " + output_file)
+        logging.info("Upscale video finished for " + output_file_w_a)
 
         if not resume_processing:
             logging.info("Cleaning up temp directory")
